@@ -1,0 +1,2 @@
+# Pi JSONL fixtures compare their content byte for byte; line-ending conversion changes their revisions.
+modules/pi/fixtures/** -text

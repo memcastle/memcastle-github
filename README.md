@@ -1,31 +1,37 @@
-# github
+# memcastle-github
 
-Scoped GitHub repositories, issues, pull requests and wiki history.
+Standalone source-only plugin for mining selected GitHub repositories, issues, pull requests, comments, reviews and
+Git-backed wiki history into [MemCastle](https://github.com/memcastle/memcastle).
 
-This provider plugin owns the versioned package, while each module has its own lifecycle.
-Installing the plugin makes its modules available; enable sources and install integrations separately.
+Install the versioned plugin with `memcastle plugin install github` (review its `curl`, `git`, `rm` and optional token
+permissions), then `memcastle source enable github` and configure a miner as described in
+[the source guide](modules/github/README.md).
+The source retains the existing `github` identity and cursor format.
+
+## Upgrading from the bundled source
+
+Upgrade Core to a release that no longer bundles `github`, then inspect whether `github` was enabled and run
+`memcastle source remove github --yes` to clear its old source-package record.
+Removal keeps mined documents, source identity and cursor; it does not remove miners.
+Run `memcastle plugin install github --adopt-source github`, review and consent to its process and environment grants,
+then `memcastle source enable github` if it was previously enabled.
+The plugin installer refuses the old source-package record and also refuses to take over previously mined history
+without explicit adoption; use `--adopt-source github` only for a palace whose history belongs to this source.
+If `github` was never enabled or mined, install the plugin normally without an adoption flag.
+
+## Development
+
+Requires Rust with `wasm32-wasip2`, Python 3.11+, and a plugin-capable MemCastle binary for integration checks.
 
 ```sh
 python3 scripts/package.py
 python3 scripts/check_modules.py
 python3 -m unittest discover -s tests
-MEMCASTLE_BIN=/path/to/memcastle python3 scripts/smoke_install.py
+PATH="$PWD/modules/github/fixtures/bin:$PATH" memcastle source test modules/github --no-build
+MEMCASTLE_BIN="$(command -v memcastle)" python3 scripts/smoke_install.py
+MEMCASTLE_BIN="$(command -v memcastle)" python3 scripts/smoke_adoption.py
 ```
 
-The archive in `dist/` is independently releasable from MemCastle Core.
-The root `plugin.toml` declares stable module identities; the package script fills artifact hashes after building.
-Commit each source module's generated `Cargo.lock` before publishing a release.
-The source module carries the versioned public WIT contract and its own fixtures; the agent integration uses MCP/HTTP.
-No module needs a private Core checkout or a sibling provider to build or test.
-The smoke check starts an isolated daemon and uses a temporary agent configuration to verify the archive install path.
-Provider CI builds and packages locally, then calls Core's shared artifact-validation workflow for a `[main, versions...]`
-matrix, with additional exact plugin-capable
-stable versions configured in `core-versions` and the `main` prerelease always included.
-The reusable validation workflow follows Core's `main` branch without a revision pin.
-It runs on every pull request and every push to `main`, including merges, without a second push run on PR branches.
-Every version exercises source fixtures and archive installation/activation; incompatible versions fail the workflow.
-The development release body records the exact Core source SHA, and the workflow summary reports it for each run.
-Core CI separately tests a freshly composed project against its current install contract.
-The provider's own release workflow accepts only a `github/v<plugin.toml version>` tag on `main`, then builds
-the reviewed artifact, runs manifest and compatibility-matrix tests, and refuses an existing release.
-Keep IDs stable when moving this project from `plugins/github/` to its own repository.
+Packaging writes `dist/github-0.1.0.tar.gz` and the SHA-256 digests in `plugin.toml`.
+Review and commit the manifest digests and `modules/github/Cargo.lock` before releasing.
+CI tests the exact built artifact against Core's shared plugin-validation workflow.

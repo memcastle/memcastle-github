@@ -1,4 +1,4 @@
-name: 📦 Publish github
+name: 📦 Publish GitHub
 
 on:
   push:
@@ -10,11 +10,11 @@ permissions:
 
 jobs:
   validate:
-    name: 🧪 Validate github
+    name: 🧪 Validate GitHub
     uses: ./.github/workflows/plugin.yml
 
   publish:
-    name: 🚀 Publish github
+    name: 🚀 Publish GitHub
     needs: validate
     runs-on: ubuntu-latest
     permissions:
@@ -40,7 +40,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: plugin-package
-      - name: Publish this provider's validated archive
+      - name: Publish GitHub's validated archive
         env:
           GH_TOKEN: ${{ github.token }}
           ARCHIVE: ${{ needs.validate.outputs.archive }}

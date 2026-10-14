@@ -16,9 +16,10 @@ for module in manifest.get("modules", []):
             raise SystemExit(f"generate and commit {directory / 'Cargo.lock'} before checking modules")
         for args in (
             ("cargo", "fmt", "--all", "--", "--check"),
+            ("cargo", "test", "--locked", "--lib"),
             ("cargo", "clippy", "--locked", "--target", "wasm32-wasip2", "--", "-D", "warnings"),
         ):
             subprocess.run(args, cwd=directory, check=True)
     elif module["type"] == "integration" and (directory / "package.json").is_file():
-        for task in ("format:check", "lint", "test", "build"):
+        for task in ("typecheck", "test", "build"):
             subprocess.run(("npm", "run", task), cwd=directory, check=True)

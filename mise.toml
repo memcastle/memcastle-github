@@ -1,0 +1,7 @@
+[tasks.test]
+description = "Validate the GitHub source module"
+run = "python3 scripts/check_modules.py"
+
+[tasks.package]
+description = "Build the standalone GitHub release archive and reviewed artifact digests"
+run = "python3 scripts/package.py"
