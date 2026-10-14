@@ -5,8 +5,11 @@
 
 [template]
 source = "https://github.com/memcastle/memcastle-plugin.tpl"
+ref = "ci/gh-ship"
 
 [answers]
+gh_ship = true
+ship_token = "app"
 description = "Scoped GitHub repositories, issues, pull requests and wiki history"
 github_owner = "memcastle"
 integration_template = "https://github.com/memcastle/memcastle-integration.tpl"
