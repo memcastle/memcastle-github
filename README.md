@@ -30,7 +30,11 @@ The provider's own release workflow accepts only a `github/v<plugin.toml version
 the reviewed artifact, runs manifest and compatibility-matrix tests, and refuses an existing release.
 Keep IDs stable when moving this project from `plugins/github/` to its own repository.
 
-The separate `coverage.yml` workflow measures native Rust source tests and Bun integration `test:cover` suites,
-then uploads the generated LCOV reports to Codecov using OIDC. Enable this repository in Codecov to see PR statuses.
-Modules without an instrumented suite are not reported; the normal plugin checks still run independently.
+Releases use gh-ship: merging a releasable Conventional Commit into `main` opens a `release/next` PR.
+Merging that PR publishes a validated `github/vVERSION` archive as a GitHub Release.
+Set up the `release` environment with variable `APP_CLIENT_ID` and secret `APP_PRIVATE_KEY`
+for an App installed on this repository.
+Grant contents, actions and pull requests write permission; issues write is needed to create the release label.
+Set squash merge title to PR title and body to blank, and enable this repository's release environment.
+The `prepare-release` workflow honors its `dry_run` input without pushing or committing.
 

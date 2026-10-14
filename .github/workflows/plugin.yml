@@ -71,3 +71,19 @@ jobs:
       archive-path: ${{ needs.package.outputs.archive }}
       # Add exact plugin-capable stable versions once available; main is always tested.
       core-versions: '[]'
+
+
+  ship-validate:
+    name: 🚢 Validate release workflow
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install gh-ship
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh extension install noirbizarre/gh-ship
+      - name: Validate gh-ship configuration
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh ship validate
+
