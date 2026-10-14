@@ -29,3 +29,8 @@ Core CI separately tests a freshly composed project against its current install 
 The provider's own release workflow accepts only a `github/v<plugin.toml version>` tag on `main`, then builds
 the reviewed artifact, runs manifest and compatibility-matrix tests, and refuses an existing release.
 Keep IDs stable when moving this project from `plugins/github/` to its own repository.
+
+The separate `coverage.yml` workflow measures native Rust source tests and Bun integration `test:cover` suites,
+then uploads the generated LCOV reports to Codecov using OIDC. Enable this repository in Codecov to see PR statuses.
+Modules without an instrumented suite are not reported; the normal plugin checks still run independently.
+
