@@ -1,5 +1,6 @@
 dist/
 !mise.toml
 modules/*/target/
+modules/*/coverage/
 modules/*/source.wasm
 __pycache__/

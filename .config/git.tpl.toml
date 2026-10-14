@@ -5,8 +5,10 @@
 
 [template]
 source = "https://github.com/memcastle/memcastle-plugin.tpl"
+ref = "ci/codecov"
 
 [answers]
+codecov = true
 description = "Scoped GitHub repositories, issues, pull requests and wiki history"
 github_owner = "memcastle"
 integration_template = "https://github.com/memcastle/memcastle-integration.tpl"

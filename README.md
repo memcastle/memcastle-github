@@ -1,5 +1,8 @@
 # memcastle-github
 
+Coverage CI measures native Rust source tests and uploads LCOV to Codecov with GitHub OIDC.
+Enable this repository in Codecov for PR coverage status.
+
 Standalone source-only plugin for mining selected GitHub repositories, issues, pull requests, comments, reviews and
 Git-backed wiki history into [MemCastle](https://github.com/memcastle/memcastle).
 
