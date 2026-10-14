@@ -1,0 +1,26 @@
+# git-tpl — https://noirbizarre.github.io/git-tpl/configuration/
+#
+# This file is versioned with the project. Edit an answer and run
+# `git tpl update` to re-render the template with it.
+
+[template]
+source = "https://github.com/memcastle/memcastle-plugin.tpl"
+
+[answers]
+description = "Scoped GitHub repositories, issues, pull requests and wiki history"
+github_owner = "memcastle"
+integration_template = "https://github.com/memcastle/memcastle-integration.tpl"
+integrations = []
+memcastle = ">=0.4, <0.6"
+plugin_id = "github"
+provider = "github"
+repository_name = "memcastle-github"
+source_template = "https://github.com/memcastle/memcastle-source.tpl"
+sources = ["github"]
+version = "0.1.0"
+
+[[composed]]
+from = "sources"
+source = "https://github.com/memcastle/memcastle-source.tpl"
+ref = "5f2a8350bd82c49ec2370d70c83019ff6fc5a822"
+commit = "5f2a8350bd82c49ec2370d70c83019ff6fc5a822"
