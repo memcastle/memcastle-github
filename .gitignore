@@ -1,6 +1,5 @@
 dist/
-!modules/*/dist/
-!modules/*/dist/**
+!mise.toml
 modules/*/target/
 modules/*/source.wasm
 __pycache__/

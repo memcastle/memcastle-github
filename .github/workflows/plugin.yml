@@ -1,4 +1,4 @@
-name: 🧩 github plugin
+name: 🧩 GitHub plugin
 
 on:
   pull_request:
@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   package:
-    name: 🏗️ Build github
+    name: 🏗️ Build GitHub
     runs-on: ubuntu-latest
     outputs:
       archive: ${{ steps.archive.outputs.path }}
@@ -26,17 +26,14 @@ jobs:
         with:
           targets: wasm32-wasip2
       - uses: Swatinem/rust-cache@v2
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.4.2'
-      - name: Build and package github
+      - name: Package GitHub
         run: python3 scripts/package.py
       - uses: memcastle/memcastle/.github/actions/core-binary@main
         with:
           version: main
-      - name: Check this provider's modules
+      - name: Run GitHub module checks
         run: python3 scripts/check_modules.py
-      - name: Check reviewed artifact hashes and source locks
+      - name: Require reviewed digests and source locks
         run: |
           git diff --exit-code -- plugin.toml || { echo '::error::commit reviewed plugin.toml digests'; exit 1; }
           for manifest in modules/*/memcastle-source.toml; do
@@ -69,5 +66,6 @@ jobs:
     with:
       artifact-name: plugin-package
       archive-path: ${{ needs.package.outputs.archive }}
-      # Add exact plugin-capable stable versions once available; main is always tested.
       core-versions: '[]'
+      extra-smoke-command: python3 scripts/smoke_adoption.py
+      fixture-bin: modules/github/fixtures/bin
