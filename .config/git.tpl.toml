@@ -5,7 +5,6 @@
 
 [template]
 source = "https://github.com/memcastle/memcastle-plugin.tpl"
-ref = "ci/codecov"
 
 [answers]
 codecov = true
