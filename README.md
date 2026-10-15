@@ -1,5 +1,11 @@
 # memcastle-github
 
+Release delivery uses gh-ship: releasable Conventional Commits open a `release/next` PR on pushes to `main`.
+Review and merge that PR to publish a validated `github/vVERSION` archive. Configure the `release` environment
+with `APP_CLIENT_ID` (variable) and `APP_PRIVATE_KEY` (secret) for a GitHub App installed on this repository with
+contents, actions and pull requests write permissions (issues write for creating labels). Set squash title to PR title
+and squash message to blank. `prepare-release` accepts `dry_run` without pushing.
+
 Standalone source-only plugin for mining selected GitHub repositories, issues, pull requests, comments, reviews and
 Git-backed wiki history into [MemCastle](https://github.com/memcastle/memcastle).
 
