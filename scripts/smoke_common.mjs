@@ -8,13 +8,17 @@ import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
 export const ROOT = dirname(dirname(fileURLToPath(import.meta.url)))
-export const BIN = process.env.MEMCASTLE_BIN && resolve(process.env.MEMCASTLE_BIN)
-assert.ok(BIN, "set MEMCASTLE_BIN to a plugin-capable Core binary")
+export const BIN = process.env.MEMCASTLE_BIN ? resolve(process.env.MEMCASTLE_BIN) : "memcastle"
 
 export function cli(args, env, cwd = ROOT) {
   const result = spawnSync(BIN, args, { cwd, env, encoding: "utf8", timeout: 60000 })
   assert.equal(result.status, 0, `${BIN} ${args.join(" ")}: ${result.stderr || result.error}`)
   return result.stdout
+}
+
+export function pluginArchive() {
+  const { plugin: { id, version } } = JSON.parse(cli(["plugin", "inspect", "--json"], process.env))
+  return join(ROOT, "dist", `${id}-${version}.tar.gz`)
 }
 
 export async function mine(request, source, locator, options) {

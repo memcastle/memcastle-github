@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import { spawnSync } from "node:child_process"
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { ROOT, cli, isolated, mine } from "./smoke_common.mjs"
+import { ROOT, cli, isolated, mine, pluginArchive } from "./smoke_common.mjs"
 
 await isolated("memcastle-github-adopt-", ({ root, env }) => {
   env.PATH = `${join(ROOT, "sources/github/fixtures/bin")}:${process.env.PATH}`
@@ -16,7 +16,7 @@ await isolated("memcastle-github-adopt-", ({ root, env }) => {
   assert.equal(unpack.status, 0, unpack.stderr)
   writeFileSync(env.MEMCASTLE_CONFIG, `[mining]\nbundled_dir = "${join(root, "bundled")}"\n`)
 }, async ({ root, request }) => {
-  const plugin = readFileSync(join(ROOT, "dist/github-0.1.0.tar.gz"))
+  const plugin = readFileSync(pluginArchive())
   const enabled = await request("/api/source-packages/github/enable", { method: "POST" })
   assert.equal(enabled.state, "enabled")
   await request("/api/miners/github", { method: "PUT", json: { source: "github", options: { include: "acme/alpha" } } })
