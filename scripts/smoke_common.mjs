@@ -1,7 +1,7 @@
 // Run provider-owned migration checks against a disposable Core daemon.
 import assert from "node:assert/strict"
 import { spawn, spawnSync } from "node:child_process"
-import { mkdtempSync, mkdirSync, rmSync } from "node:fs"
+import { mkdtempSync, mkdirSync, readdirSync, rmSync } from "node:fs"
 import { createServer } from "node:net"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
@@ -17,8 +17,10 @@ export function cli(args, env, cwd = ROOT) {
 }
 
 export function pluginArchive() {
-  const { plugin: { id, version } } = JSON.parse(cli(["plugin", "inspect", "--json"], process.env))
-  return join(ROOT, "dist", `${id}-${version}.tar.gz`)
+  if (process.env.ARCHIVE) return resolve(ROOT, process.env.ARCHIVE)
+  const archives = readdirSync(join(ROOT, "dist")).filter((name) => name.startsWith("github-") && name.endsWith(".tar.gz"))
+  assert.equal(archives.length, 1, "expected exactly one GitHub plugin archive in dist/; set ARCHIVE to select one")
+  return join(ROOT, "dist", archives[0])
 }
 
 export async function mine(request, source, locator, options) {
