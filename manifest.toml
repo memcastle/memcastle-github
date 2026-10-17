@@ -14,8 +14,8 @@ license = "MIT"
 id = "github"
 type = "source"
 version = "0.1.0"
-manifest = "modules/github/memcastle-source.toml"
-entry = "modules/github/source.wasm"
+manifest = "sources/github/memcastle-source.toml"
+entry = "sources/github/source.wasm"
 contract = "0.4.0"
 
 
