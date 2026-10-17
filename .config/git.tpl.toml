@@ -7,14 +7,17 @@
 source = "https://github.com/memcastle/memcastle-plugin.tpl"
 
 [answers]
+codecov = true
 description = "Scoped GitHub repositories, issues, pull requests and wiki history"
 github_owner = "memcastle"
 integration_template = "https://github.com/memcastle/memcastle-integration.tpl"
 integrations = []
+gh_ship = true
 memcastle = ">=0.4, <0.6"
 plugin_id = "github"
 provider = "github"
 repository_name = "memcastle-github"
+ship_token = "app"
 source_template = "https://github.com/memcastle/memcastle-source.tpl"
 sources = ["github"]
 version = "0.1.0"

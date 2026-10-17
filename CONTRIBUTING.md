@@ -1,6 +1,6 @@
 # Contributing to memcastle-github
 
-Install Rust with the `wasm32-wasip2` target and Python 3.11+.
+Install Rust with the `wasm32-wasip2` target and Node.js.
 The source code, offline REST/Git fixtures and manifest live in `modules/github/`.
 Keep the source ID `github`, its option identity and cursor format stable across releases.
 Review changes to the WIT contract, process/environment permissions and Core compatibility together.
@@ -8,15 +8,15 @@ Review changes to the WIT contract, process/environment permissions and Core com
 With `MEMCASTLE_BIN` pointing to a plugin-capable Core binary:
 
 ```sh
+cargo test --manifest-path modules/github/Cargo.toml --locked
+# Build the wasm32-wasip2 component and copy it to modules/github/source.wasm first.
 mise run package
-mise run test
-python3 -m unittest discover -s tests
+"$MEMCASTLE_BIN" plugin test dist/github-0.1.0.tar.gz
 PATH="$PWD/modules/github/fixtures/bin:$PATH" "$MEMCASTLE_BIN" source test modules/github --no-build
-python3 scripts/smoke_install.py
-python3 scripts/smoke_adoption.py
+node scripts/smoke_adoption.mjs
 ```
 
-Review and commit `plugin.toml`'s generated digests and `modules/github/Cargo.lock` together with implementation changes.
+Review and commit the generated `manifest.toml` digests and `modules/github/Cargo.lock` together with implementation changes.
 CI builds and validates the exact `dist/github-<version>.tar.gz` against Core's shared source conformance and plugin
 installation workflow.
-Release tags are `github/v<version>` on `main`; publish only after the validation workflow passes.
+gh-ship uses git-cliff to propose a `release/next` PR and publishes `github/v<version>` after review and CI.

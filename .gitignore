@@ -1,5 +1,7 @@
 dist/
-!mise.toml
 modules/*/target/
+modules/*/coverage/
+modules/*/junit.xml
 modules/*/source.wasm
+ship.release.json
 __pycache__/
