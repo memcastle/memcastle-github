@@ -6,12 +6,12 @@ import { join } from "node:path"
 import { ROOT, cli, isolated, mine } from "./smoke_common.mjs"
 
 await isolated("memcastle-github-adopt-", ({ root, env }) => {
-  env.PATH = `${join(ROOT, "modules/github/fixtures/bin")}:${process.env.PATH}`
+  env.PATH = `${join(ROOT, "sources/github/fixtures/bin")}:${process.env.PATH}`
   env.MEMCASTLE_CONFIG = join(root, "config.toml")
   const bundled = join(root, "bundled/github")
   mkdirSync(bundled, { recursive: true })
-  cli(["source", "package", join(ROOT, "modules/github"), "--no-build"], env)
-  const archive = join(ROOT, "modules/github/dist/github-0.1.0.tar.gz")
+  cli(["source", "package", join(ROOT, "sources/github"), "--no-build"], env)
+  const archive = join(ROOT, "sources/github/dist/github-0.1.0.tar.gz")
   const unpack = spawnSync("tar", ["-xzf", archive, "-C", bundled], { encoding: "utf8" })
   assert.equal(unpack.status, 0, unpack.stderr)
   writeFileSync(env.MEMCASTLE_CONFIG, `[mining]\nbundled_dir = "${join(root, "bundled")}"\n`)

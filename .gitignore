@@ -1,7 +1,12 @@
 dist/
-modules/*/target/
-modules/*/coverage/
-modules/*/junit.xml
-modules/*/source.wasm
+!integrations/*/dist/
+!integrations/*/dist/**
+sources/*/target/
+sources/*/coverage/
+sources/*/junit.xml
+sources/*/source.wasm
+integrations/*/node_modules/
+integrations/*/coverage/
+integrations/*/junit.xml
 ship.release.json
 __pycache__/
