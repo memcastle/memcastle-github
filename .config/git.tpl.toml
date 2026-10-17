@@ -8,6 +8,7 @@ source = "https://github.com/memcastle/memcastle-plugin.tpl"
 
 [answers]
 codecov = true
+core_versions = ["main"]
 description = "Scoped GitHub repositories, issues, pull requests and wiki history"
 gh_ship = true
 github_owner = "memcastle"
@@ -20,7 +21,6 @@ repository_name = "memcastle-github"
 ship_token = "app"
 source_template = "https://github.com/memcastle/memcastle-source.tpl"
 sources = ["github"]
-version = "0.1.0"
 
 [[composed]]
 from = "sources"
