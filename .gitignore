@@ -2,6 +2,6 @@ dist/
 !modules/*/dist/
 !modules/*/dist/**
 modules/*/target/
+modules/*/coverage/
 modules/*/source.wasm
-__pycache__/
 ship.release.json

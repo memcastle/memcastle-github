@@ -13,7 +13,7 @@ permissions:
 jobs:
   validate:
     name: 🧪 Validate release archive
-    uses: ./.github/workflows/plugin.yml
+    uses: ./.github/workflows/ci.yaml
 
   publish:
     needs: validate
@@ -29,13 +29,16 @@ jobs:
           ref: ${{ inputs.tag }}
           fetch-depth: 0
           persist-credentials: false
+      - uses: memcastle/memcastle/.github/actions/core-binary@main
+        with:
+          version: main
       - name: Require reviewed tag on main and existing draft
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
-          expected="$(python3 -c 'import tomllib; p=tomllib.load(open("plugin.toml", "rb"))["plugin"]; print("{}/v{}".format(p["id"], p["version"]))')"
+          expected="$("$MEMCASTLE_BIN" plugin inspect plugin.toml --json | jq -r '.plugin | "\(.id)/v\(.version)"')"
           test "$TAG" = "$expected" || { echo '::error::tag does not match plugin.toml'; exit 1; }
           git fetch origin main
           git merge-base --is-ancestor HEAD origin/main || { echo '::error::tag must be on main'; exit 1; }
@@ -50,4 +53,6 @@ jobs:
           ARCHIVE: ${{ needs.validate.outputs.archive }}
         run: |
           test -s "$ARCHIVE"
-          gh release upload "$TAG" "$ARCHIVE" --clobber
+          checksum="${ARCHIVE%.tar.gz}.sha256sum"
+          test -s "$checksum"
+          gh release upload "$TAG" "$ARCHIVE" "$checksum" --clobber
