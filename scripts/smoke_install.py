@@ -42,7 +42,7 @@ def mine(base, options=None):
 
 def main():
     binary = Path(os.environ["MEMCASTLE_BIN"]).resolve()
-    manifest = tomllib.loads((ROOT / "plugin.toml").read_text())
+    manifest = tomllib.loads((ROOT / "manifest.toml").read_text())
     archive = (ROOT / "dist" / f"github-{manifest['plugin']['version']}.tar.gz").read_bytes()
     with tempfile.TemporaryDirectory(prefix="memcastle-github-smoke-") as scratch:
         root = Path(scratch)

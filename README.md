@@ -24,14 +24,18 @@ If `github` was never enabled or mined, install the plugin normally without an a
 Requires Rust with `wasm32-wasip2`, Python 3.11+, and a plugin-capable MemCastle binary for integration checks.
 
 ```sh
-python3 scripts/package.py
-python3 scripts/check_modules.py
-python3 -m unittest discover -s tests
+memcastle plugin inspect plugin.toml --json
+# Build modules/github for wasm32-wasip2 first.
+memcastle plugin package plugin.toml
+memcastle plugin test dist/github-0.1.0.tar.gz
 PATH="$PWD/modules/github/fixtures/bin:$PATH" memcastle source test modules/github --no-build
 MEMCASTLE_BIN="$(command -v memcastle)" python3 scripts/smoke_install.py
 MEMCASTLE_BIN="$(command -v memcastle)" python3 scripts/smoke_adoption.py
 ```
 
-Packaging writes `dist/github-0.1.0.tar.gz` and the SHA-256 digests in `plugin.toml`.
-Review and commit the manifest digests and `modules/github/Cargo.lock` before releasing.
+Packaging writes `dist/github-0.1.0.tar.gz` and its external `.sha256sum`. `plugin.toml` remains an immutable
+descriptor; review and commit the regenerated `manifest.toml` and `modules/github/Cargo.lock` before releasing.
 CI tests the exact built artifact against Core's shared plugin-validation workflow.
+CI also uploads native Cargo coverage and test results to Codecov. gh-ship and git-cliff open a reviewed `release/next`
+PR for releasable commits. Configure the `release` environment with `APP_CLIENT_ID` and `APP_PRIVATE_KEY` for an
+installed GitHub App before publishing.
