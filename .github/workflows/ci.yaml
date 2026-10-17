@@ -72,7 +72,7 @@ jobs:
           MODULE: ${{ matrix.source }}
         run: |
           cd "modules/$MODULE"
-          cargo llvm-cov nextest --locked --config-file "$GITHUB_WORKSPACE/.config/nextest.toml" --no-tests=pass
+          cargo llvm-cov nextest --locked --config-file "$GITHUB_WORKSPACE/.config/nextest.toml" --no-tests=pass --lib
           if grep -q '<testcase' target/nextest/default/junit.xml; then
             mkdir -p coverage
             cargo llvm-cov report --lcov --output-path coverage/lcov.info
@@ -258,4 +258,4 @@ jobs:
       archive-path: ${{ needs.package.outputs.archive }}
       core-versions: '[]'
       fixture-bin: modules/github/fixtures/bin
-      extra-smoke-command: python3 scripts/smoke_adoption.py
+      extra-smoke-command: node scripts/smoke_adoption.mjs

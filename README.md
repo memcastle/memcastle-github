@@ -21,7 +21,7 @@ If `github` was never enabled or mined, install the plugin normally without an a
 
 ## Development
 
-Requires Rust with `wasm32-wasip2`, Python 3.11+, and a plugin-capable MemCastle binary for integration checks.
+Requires Rust with `wasm32-wasip2`, Node.js and a plugin-capable MemCastle binary for migration checks.
 
 ```sh
 memcastle plugin inspect plugin.toml --json
@@ -29,8 +29,7 @@ memcastle plugin inspect plugin.toml --json
 memcastle plugin package plugin.toml
 memcastle plugin test dist/github-0.1.0.tar.gz
 PATH="$PWD/modules/github/fixtures/bin:$PATH" memcastle source test modules/github --no-build
-MEMCASTLE_BIN="$(command -v memcastle)" python3 scripts/smoke_install.py
-MEMCASTLE_BIN="$(command -v memcastle)" python3 scripts/smoke_adoption.py
+MEMCASTLE_BIN="$(command -v memcastle)" node scripts/smoke_adoption.mjs
 ```
 
 Packaging writes `dist/github-0.1.0.tar.gz` and its external `.sha256sum`. `plugin.toml` remains an immutable
