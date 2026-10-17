@@ -252,6 +252,7 @@ jobs:
   validate:
     name: 🧪 Check with Core
     needs: package
+    if: ${{ always() && needs.package.result == 'success' }}
     uses: memcastle/memcastle/.github/workflows/plugin-validation.yaml@main
     with:
       artifact-name: plugin-package
