@@ -1,5 +1,7 @@
 # memcastle-github
 
+[![CI](https://github.com/memcastle/memcastle-github/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/memcastle/memcastle-github/actions/workflows/ci.yaml) [![Codecov](https://codecov.io/gh/memcastle/memcastle-github/graph/badge.svg)](https://codecov.io/gh/memcastle/memcastle-github)
+
 Standalone source-only plugin for mining selected GitHub repositories, issues, pull requests, comments, reviews and
 Git-backed wiki history into [MemCastle](https://github.com/memcastle/memcastle).
 
@@ -24,16 +26,16 @@ If `github` was never enabled or mined, install the plugin normally without an a
 Requires Rust with `wasm32-wasip2`, Node.js and a plugin-capable MemCastle binary for migration checks.
 
 ```sh
-memcastle plugin inspect plugin.toml --json
+memcastle plugin inspect --json
 # Build sources/github for wasm32-wasip2 first.
-memcastle plugin package plugin.toml
-memcastle plugin test dist/github-0.1.0.tar.gz
+memcastle plugin package
+memcastle plugin test dist/github-VERSION.tar.gz
 PATH="$PWD/sources/github/fixtures/bin:$PATH" memcastle source test sources/github --no-build
-MEMCASTLE_BIN="$(command -v memcastle)" node scripts/smoke_adoption.mjs
+node scripts/smoke_adoption.mjs
 ```
 
-Packaging writes `dist/github-0.1.0.tar.gz` and its external `.sha256sum`. `plugin.toml` remains an immutable
-descriptor; review and commit the regenerated `manifest.toml` and `sources/github/Cargo.lock` before releasing.
+Packaging writes an SCM-versioned archive in `dist/` and its external `.sha256sum`. `plugin.toml` remains an immutable
+descriptor; `manifest.toml` is generated only inside the archive. Commit `sources/github/Cargo.lock` before releasing.
 CI tests the exact built artifact against Core's shared plugin-validation workflow.
 CI also uploads native Cargo coverage and test results to Codecov. gh-ship and git-cliff open a reviewed `release/next`
 PR for releasable commits. Configure the `release` environment with `APP_CLIENT_ID` and `APP_PRIVATE_KEY` for an

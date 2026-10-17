@@ -10,13 +10,13 @@ With `MEMCASTLE_BIN` pointing to a plugin-capable Core binary:
 ```sh
 cargo test --manifest-path sources/github/Cargo.toml --locked
 # Build the wasm32-wasip2 component and copy it to sources/github/source.wasm first.
-mise run package
-"$MEMCASTLE_BIN" plugin test dist/github-0.1.0.tar.gz
+archive="$("$MEMCASTLE_BIN" plugin package --json | jq -r .archive)"
+"$MEMCASTLE_BIN" plugin test "$archive"
 PATH="$PWD/sources/github/fixtures/bin:$PATH" "$MEMCASTLE_BIN" source test sources/github --no-build
-node scripts/smoke_adoption.mjs
+ARCHIVE="$archive" node scripts/smoke_adoption.mjs
 ```
 
-Review and commit the generated `manifest.toml` digests and `sources/github/Cargo.lock` together with implementation changes.
+Core generates the hashed `manifest.toml` only inside the archive; commit `sources/github/Cargo.lock` with implementation changes.
 CI builds and validates the exact `dist/github-<version>.tar.gz` against Core's shared source conformance and plugin
 installation workflow.
 gh-ship uses git-cliff to propose a `release/next` PR and publishes `github/v<version>` after review and CI.
