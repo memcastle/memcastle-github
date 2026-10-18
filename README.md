@@ -40,5 +40,5 @@ CI tests the exact built artifact against Core's shared plugin-validation workfl
 CI also uploads native Cargo coverage and test results to Codecov. gh-ship and git-cliff open a reviewed `release/next`
 PR for releasable commits. Configure the `release` environment with `APP_CLIENT_ID` and `APP_PRIVATE_KEY` for an
 installed GitHub App before publishing.
-Codecov uses fixed 14% project, patch and `source-github` component floors; the source flag does not carry forward
+Codecov uses fixed 81% project and `source-github` component floors and an 80% patch floor; the source flag does not carry forward
 coverage from a previous commit.

@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::memcastle::source::host::run_process;
+use crate::run_process;
 
 const MAX_REVISIONS: usize = 10_000;
 
@@ -143,4 +143,33 @@ pub(crate) fn page(revision: &Revision) -> Result<String, String> {
     }
     Clone::open(&revision.repo)?
         .command(&["show", &format!("{}:{}", revision.commit, revision.path)])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejects_unsafe_wiki_paths_and_commit_ids() {
+        for path in [
+            "",
+            "README",
+            "/Home.md",
+            "../Home.md",
+            "./Home.md",
+            "a//b.md",
+            "a/../b.md",
+            "a/\nb.md",
+        ] {
+            assert!(!valid_path(path), "{path:?}");
+        }
+        assert!(valid_path("docs/Guide.md"));
+        let mut revision = revisions("acme/alpha").unwrap().remove(0);
+        assert_eq!(page(&revision).unwrap(), "# Home v1\n");
+        revision.path = "../outside.md".into();
+        assert!(page(&revision).unwrap_err().contains("invalid"));
+        revision.path = "Home.md".into();
+        revision.commit = "not-a-sha".into();
+        assert!(page(&revision).unwrap_err().contains("invalid"));
+    }
 }

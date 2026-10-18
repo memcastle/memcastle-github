@@ -3,6 +3,50 @@
 mod api;
 mod wiki;
 
+#[cfg(not(test))]
+use memcastle::source::host::run_process;
+
+// Native coverage runs cannot call the component host import. Execute only the checked-in
+// offline stand-ins, using absolute paths so tests never change the process-wide PATH.
+#[cfg(test)]
+fn run_process(
+    program: &str,
+    args: &[String],
+    stdin: Option<&[u8]>,
+) -> Result<memcastle::source::host::ProcessOutput, String> {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+
+    let executable = match program {
+        "curl" | "git" => format!("{}/fixtures/bin/{program}", env!("CARGO_MANIFEST_DIR")),
+        "rm" => "/bin/rm".into(),
+        _ => return Err("unexpected test process".into()),
+    };
+    let mut child = Command::new(executable)
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| error.to_string())?;
+    if let Some(input) = stdin {
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(input)
+            .map_err(|error| error.to_string())?;
+    }
+    let output = child
+        .wait_with_output()
+        .map_err(|error| error.to_string())?;
+    Ok(memcastle::source::host::ProcessOutput {
+        status: output.status.code().unwrap_or(-1),
+        stdout: output.stdout,
+        stderr: output.stderr,
+    })
+}
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use chrono::{DateTime, Utc};
@@ -821,6 +865,303 @@ export!(GitHub);
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn source(options: &[(&str, &str)]) -> SourceRef {
+        GitHub::identify(
+            None,
+            std::iter::once(("include", "acme/alpha"))
+                .chain(options.iter().copied())
+                .map(|(key, value)| (key.into(), value.into()))
+                .collect(),
+        )
+        .unwrap()
+    }
+
+    fn discover_all(source: &SourceRef) -> Discovery {
+        GitHub::discover(source.clone(), "null".into(), 100).unwrap()
+    }
+
+    #[test]
+    fn rejects_invalid_options_and_unsafe_scopes() {
+        for options in [
+            vec![],
+            vec![("include", "acme/alpha"), ("include", "acme/beta")],
+            vec![("include", "acme/")],
+            vec![("include", "acme/alpha,")],
+            vec![("include", "acme/alpha"), ("unknown", "yes")],
+            vec![("include", "acme/alpha"), ("issues", "yes")],
+            vec![("include", "acme/alpha"), ("since", "tomorrow")],
+            vec![("include", "acme/alpha"), ("wiki_exclude", "acme/alpha")],
+            vec![
+                ("include", "acme/alpha"),
+                ("pulls", "false"),
+                ("reviews", "true"),
+            ],
+            vec![
+                ("include", "acme/alpha"),
+                ("issues", "false"),
+                ("pulls", "false"),
+                ("comments", "true"),
+            ],
+        ] {
+            assert!(matches!(
+                GitHub::identify(
+                    None,
+                    options
+                        .into_iter()
+                        .map(|(k, v)| (k.into(), v.into()))
+                        .collect()
+                ),
+                Err(SourceError::InvalidInput(_))
+            ));
+        }
+        assert!(matches!(
+            GitHub::identify(
+                Some("\n".into()),
+                vec![("include".into(), "acme/alpha".into())]
+            ),
+            Err(SourceError::InvalidInput(_))
+        ));
+        assert_eq!(GitHub::default_room(), "repositories");
+        assert_eq!(GitHub::default_wing(source(&[])), "github");
+        assert_eq!(since("2026-01").unwrap(), since("2026-01-01").unwrap());
+        assert!(glob("acme/alph?", "acme/alpha"));
+        assert!(!glob("acme/*", "acme/nested/repo"));
+    }
+
+    #[test]
+    fn selectors_change_identity_but_since_does_not() {
+        let base = source(&[]);
+        assert_eq!(base.account, source(&[("since", "2026-01")]).account);
+        assert_ne!(base.account, source(&[("labels", "wanted")]).account);
+        assert_eq!(
+            source(&[("labels", "WANTED, docs")]).account,
+            source(&[("labels", "docs,wanted")]).account
+        );
+        assert!(
+            source(&[
+                ("issues", "false"),
+                ("pulls", "false"),
+                ("metadata", "false"),
+                ("wiki_include", "acme/alpha")
+            ])
+            .account
+            .is_some()
+        );
+    }
+
+    #[test]
+    fn cursor_rejects_malformed_and_legacy_positions() {
+        assert!(cursor("null").unwrap().api.is_empty());
+        for value in [
+            "{",
+            "{}",
+            r#"{"other":1}"#,
+            r#"{"api":{"bad":["2026-01-01T00:00:00Z","1"]},"wiki":{}}"#,
+            r#"{"api":{},"wiki":{"acme/alpha":"bad"}}"#,
+        ] {
+            assert!(
+                matches!(cursor(value), Err(SourceError::CursorInvalid(_))),
+                "{value}"
+            );
+        }
+    }
+
+    #[test]
+    fn discovery_paginates_without_repeating_candidates() {
+        let source = source(&[]);
+        let zero = GitHub::discover(source.clone(), "null".into(), 0).unwrap();
+        assert!(zero.candidates.is_empty());
+        assert!(!zero.exhausted);
+        let mut position = "null".to_string();
+        let mut ids = Vec::new();
+        loop {
+            let page = GitHub::discover(source.clone(), position.clone(), 1).unwrap();
+            for candidate in &page.candidates {
+                ids.push(candidate.external_id.clone());
+                position = candidate.cursor_after.clone();
+            }
+            if page.exhausted {
+                break;
+            }
+        }
+        assert_eq!(
+            ids,
+            [
+                "acme/alpha/issue/10",
+                "acme/alpha/repository/1",
+                "acme/alpha/pull/20"
+            ]
+        );
+        assert!(discover_all(&source).exhausted);
+        assert!(matches!(
+            GitHub::discover(source, "{}".into(), 1),
+            Err(SourceError::CursorInvalid(_))
+        ));
+    }
+
+    #[test]
+    fn filters_repositories_and_documents() {
+        let selected = source(&[
+            ("labels", "wanted"),
+            ("topics", "docs"),
+            ("comments", "true"),
+            ("reviews", "true"),
+        ]);
+        let ids: Vec<_> = discover_all(&selected)
+            .candidates
+            .into_iter()
+            .map(|c| c.external_id)
+            .collect();
+        assert!(ids.contains(&"acme/alpha/comment/31".into()));
+        assert!(ids.contains(&"acme/alpha/review-comment/41".into()));
+        assert!(ids.contains(&"acme/alpha/review/51".into()));
+        assert_eq!(
+            discover_all(&source(&[("issues", "false"), ("comments", "true")]))
+                .candidates
+                .len(),
+            2
+        );
+        assert_eq!(
+            discover_all(&source(&[("since", "2026-01-02"), ("metadata", "false")]))
+                .candidates
+                .len(),
+            1
+        );
+        assert_eq!(
+            discover_all(&source(&[("metadata", "false"), ("issues", "false")]))
+                .candidates
+                .len(),
+            1
+        );
+        assert!(matches!(
+            GitHub::discover(source(&[("topics", "missing")]), "null".into(), 10),
+            Err(SourceError::Failed(_))
+        ));
+        assert!(matches!(
+            GitHub::discover(source(&[("exclude", "acme/*")]), "null".into(), 10),
+            Err(SourceError::Failed(_))
+        ));
+    }
+
+    #[test]
+    fn wiki_history_filters_and_resumes() {
+        let wiki_source = source(&[("wiki_include", "acme/alpha"), ("paths", "home.md")]);
+        let first = discover_all(&wiki_source);
+        assert_eq!(first.candidates.len(), 5);
+        let wiki = &first.candidates[3..];
+        assert!(wiki.iter().all(|c| c.external_id.contains("Home.md")));
+        let raw = GitHub::read(wiki_source.clone(), wiki[0].clone())
+            .unwrap()
+            .unwrap();
+        assert_eq!(raw.body, "# Home v1\n");
+        assert_eq!(
+            GitHub::normalize(raw).unwrap().room.as_deref(),
+            Some("wikis")
+        );
+        let last = wiki.last().unwrap().cursor_after.clone();
+        assert!(
+            GitHub::discover(wiki_source.clone(), last, 10)
+                .unwrap()
+                .candidates
+                .is_empty()
+        );
+        let mut stale: Value = serde_json::from_str(&wiki[0].cursor_after).unwrap();
+        stale["wiki"]["acme/alpha"] = json!(format!("{}:Missing.md", "a".repeat(40)));
+        assert!(matches!(
+            GitHub::discover(wiki_source.clone(), stale.to_string(), 10),
+            Err(SourceError::CursorInvalid(_))
+        ));
+        assert!(matches!(
+            GitHub::discover(source(&[("wiki_include", "other/*")]), "null".into(), 10),
+            Err(SourceError::InvalidInput(_))
+        ));
+        assert!(matches!(
+            GitHub::discover(
+                source(&[
+                    ("wiki_include", "acme/alpha"),
+                    ("wiki_exclude", "acme/alpha")
+                ]),
+                "null".into(),
+                10
+            ),
+            Err(SourceError::InvalidInput(_))
+        ));
+    }
+
+    #[test]
+    fn reads_each_api_kind_and_normalizes_metadata() {
+        let source = source(&[("comments", "true"), ("reviews", "true")]);
+        let discovered = discover_all(&source);
+        assert_eq!(discovered.candidates.len(), 6);
+        for candidate in discovered.candidates {
+            let raw = GitHub::read(source.clone(), candidate.clone())
+                .unwrap()
+                .unwrap();
+            assert_eq!(raw.external_id, candidate.external_id);
+            assert_eq!(raw.revision.len(), 64);
+            let canonical = GitHub::normalize(raw).unwrap();
+            assert!(canonical.tags.contains(&"github".into()));
+            assert_eq!(canonical.segments.len(), 1);
+        }
+        let review = discover_all(&source)
+            .candidates
+            .into_iter()
+            .find(|c| c.external_id.contains("/review/"))
+            .unwrap();
+        assert!(
+            GitHub::read(source.clone(), review)
+                .unwrap()
+                .unwrap()
+                .body
+                .starts_with("Review: submitted by unknown")
+        );
+        let invalid = Candidate {
+            external_id: "invalid".into(),
+            cursor_after: "null".into(),
+            handle: "{".into(),
+        };
+        assert!(matches!(
+            GitHub::read(source.clone(), invalid),
+            Err(SourceError::Failed(_))
+        ));
+        let unknown = Candidate { external_id: "unknown".into(), cursor_after: "null".into(), handle: json!({"kind":"mystery","repo":"acme/alpha","number":null,"id":null,"wiki":null,"updated":"2026-01-01T00:00:00Z"}).to_string() };
+        assert!(matches!(
+            GitHub::read(source, unknown),
+            Err(SourceError::Failed(_))
+        ));
+    }
+
+    #[test]
+    fn normalization_rejects_missing_metadata_and_maps_rooms() {
+        let raw = |metadata: &str| RawDocument {
+            external_id: "id".into(),
+            revision: "revision".into(),
+            body: "body".into(),
+            metadata: metadata.into(),
+            occurred_at: None,
+        };
+        for value in ["{", "{}", r#"{"kind":"issue"}"#] {
+            assert!(matches!(
+                GitHub::normalize(raw(value)),
+                Err(SourceError::Failed(_))
+            ));
+        }
+        for (kind, room) in [
+            ("repository", "repositories"),
+            ("issue", "issues"),
+            ("pull", "pulls"),
+            ("review", "pulls"),
+            ("comment", "issues"),
+            ("wiki", "wikis"),
+        ] {
+            let doc = GitHub::normalize(raw(&json!({"kind":kind,"repo":"acme/alpha","labels":["wanted"],"topics":["docs"],"title":"Title","url":"https://github.com"}).to_string())).unwrap();
+            assert_eq!(doc.room.as_deref(), Some(room));
+            assert!(doc.tags.contains(&"label:wanted".into()));
+            assert!(doc.tags.contains(&"topic:docs".into()));
+            assert_eq!(doc.title.as_deref(), Some("Title"));
+        }
+    }
 
     #[test]
     fn an_org_glob_does_not_cross_repository_or_owner_boundaries() {
