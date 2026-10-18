@@ -2,15 +2,22 @@
 
 use serde_json::Value;
 
-use crate::memcastle::source::host::run_process;
+use crate::run_process;
 
 const MAX_PAGES: usize = 100;
 const PAGE_SIZE: usize = 100;
 
+#[cfg(not(test))]
 pub(crate) fn token() -> Option<String> {
     ["GH_TOKEN", "GITHUB_TOKEN"]
         .into_iter()
         .find_map(|name| std::env::var(name).ok().filter(|token| !token.is_empty()))
+}
+
+// Native tests always use public, offline fixtures, regardless of the developer's environment.
+#[cfg(test)]
+pub(crate) fn token() -> Option<String> {
+    None
 }
 
 fn escape(value: &str) -> Result<String, String> {
@@ -95,4 +102,51 @@ pub(crate) fn pages(path: &str) -> Result<Vec<Value>, String> {
         }
     }
     Err("GitHub list exceeds 10,000 entries; narrow the repository selection".into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejects_unsafe_credentials_and_api_paths() {
+        for value in ["line\nbreak", "nul\0byte", "return\r"] {
+            assert!(escape(value).is_err());
+        }
+        assert_eq!(escape("a\\\"b").unwrap(), "a\\\\\\\"b");
+        for path in [
+            "repos/acme/alpha",
+            "//evil.example",
+            "/repo\nheader",
+            "/repo\0x",
+        ] {
+            assert_eq!(request(path).unwrap_err(), "invalid GitHub API path");
+        }
+    }
+
+    #[test]
+    fn reports_http_json_and_page_errors_without_leaking_responses() {
+        for (path, message) in [
+            ("/test/no-status", "no HTTP status"),
+            ("/test/malformed", "malformed JSON"),
+            ("/test/unauthorized", "refused"),
+            ("/test/forbidden", "refused"),
+            ("/test/not-found", "unavailable"),
+            ("/test/limited", "rate-limited"),
+            ("/test/redirect", "redirected"),
+            ("/test/unavailable", "HTTP 503"),
+        ] {
+            assert!(request(path).unwrap_err().contains(message), "{path}");
+        }
+        assert!(
+            pages("/test/not-array")
+                .unwrap_err()
+                .contains("not an array")
+        );
+        assert!(pages("/test/oversized").unwrap_err().contains("oversized"));
+        assert_eq!(
+            pages("/repos/acme/alpha/issues?state=all").unwrap().len(),
+            2
+        );
+    }
 }

@@ -29,7 +29,35 @@ def issue(number, pull=False):
 
 
 path = url.path
-if path == "/orgs/acme/repos":
+if path == "/test/not-array":
+    response = {"message": "not a list"}
+elif path == "/test/oversized":
+    response = [repo("acme/alpha")] * 101
+elif path == "/test/malformed":
+    sys.stdout.write('{\nMEMCASTLE_HTTP_STATUS:200')
+    raise SystemExit(0)
+elif path == "/test/no-status":
+    sys.stdout.write('{}')
+    raise SystemExit(0)
+elif path == "/test/unauthorized":
+    sys.stdout.write('{}\nMEMCASTLE_HTTP_STATUS:401')
+    raise SystemExit(0)
+elif path == "/test/forbidden":
+    sys.stdout.write('{}\nMEMCASTLE_HTTP_STATUS:403')
+    raise SystemExit(0)
+elif path == "/test/not-found":
+    sys.stdout.write('{}\nMEMCASTLE_HTTP_STATUS:404')
+    raise SystemExit(0)
+elif path == "/test/limited":
+    sys.stdout.write('{}\nMEMCASTLE_HTTP_STATUS:429')
+    raise SystemExit(0)
+elif path == "/test/redirect":
+    sys.stdout.write('{}\nMEMCASTLE_HTTP_STATUS:302')
+    raise SystemExit(0)
+elif path == "/test/unavailable":
+    sys.stdout.write('{}\nMEMCASTLE_HTTP_STATUS:503')
+    raise SystemExit(0)
+elif path == "/orgs/acme/repos":
     response = [repo("acme/alpha"), repo("acme/other")]
 elif path == "/repos/acme/alpha":
     response = repo("acme/alpha")
