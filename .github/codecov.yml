@@ -2,9 +2,40 @@ coverage:
   status:
     project:
       default:
-        target: auto
+        target: "14%"
+        threshold: 0%
     patch:
       default:
-        target: auto
+        target: "14%"
+        threshold: 0%
+
+# Each flag names the same typed module as the matching CI upload.
+# A missing report is not carried forward from an earlier commit.
+flags:
+
+  source-github:
+    paths: ["sources/github/src/**"]
+    carryforward: false
+
+
+
+# Components describe actual file ownership, independently of upload flags.
+# Modules without native coverage stay visible without becoming failing gates.
+component_management:
+  individual_components:
+
+    - component_id: source-github
+      name: Source github
+      paths: ["sources/github/src/**"]
+      statuses:
+        - type: project
+
+          target: "14%"
+          threshold: 0%
+
+
+
+
 comment:
-  layout: reach,diff,flags,files
+  layout: reach,diff,flags,components,files
+  require_changes: false
