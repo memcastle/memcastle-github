@@ -5,8 +5,9 @@
 Standalone source-only plugin for mining selected GitHub repositories, issues, pull requests, comments, reviews and
 Git-backed wiki history into [MemCastle](https://github.com/memcastle/memcastle).
 
-Install the versioned plugin with `memcastle plugin install github` (review its `curl`, `git`, `rm` and optional token
-permissions), then `memcastle source enable github` and configure a miner as described in
+Use MemCastle Core with the optional selected-credential contract from [Core #341](https://github.com/memcastle/memcastle/issues/341).
+Install the versioned plugin with `memcastle plugin install github` (review its selected-credential, optional legacy token
+environment and `curl`, `git`, `rm`, `sh` process permissions), then `memcastle source enable github` and configure a shared source configuration and miners as described in
 [the source guide](sources/github/README.md).
 The source retains the existing `github` identity and cursor format.
 

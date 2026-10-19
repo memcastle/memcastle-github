@@ -24,9 +24,25 @@ fn valid_path(path: &str) -> bool {
         && !path.chars().any(char::is_control)
 }
 
-fn git(args: &[String]) -> Result<Vec<u8>, String> {
-    let output = run_process("git", args, None)
-        .map_err(|_| "cannot run git; install it on the daemon's PATH".to_string())?;
+fn git(args: &[String], token: Option<&str>) -> Result<Vec<u8>, String> {
+    // The selected credential is not implicitly inherited by host-run processes. A fixed wrapper
+    // reads it on stdin and exports it only for this clone and its Git credential helper.
+    let output = if let Some(token) = token {
+        if token.contains(['\r', '\n', '\0']) {
+            return Err("the GitHub credential contains a line break".into());
+        }
+        let mut command = vec![
+            "-c".into(),
+            "IFS= read -r MC_GITHUB_TOKEN || exit 1; export MC_GITHUB_TOKEN; exec git \"$@\""
+                .into(),
+            "sh".into(),
+        ];
+        command.extend_from_slice(args);
+        run_process("sh", &command, Some(format!("{token}\n").as_bytes()))
+    } else {
+        run_process("git", args, None)
+    }
+    .map_err(|_| "cannot run git; install it on the daemon's PATH".to_string())?;
     if output.status != 0 {
         // Git may print a credential-bearing remote URL or a helper diagnostic. Never relay its stderr.
         return Err(
@@ -55,9 +71,10 @@ impl Clone {
         getrandom::fill(&mut nonce).map_err(|_| "cannot create random Git scratch path")?;
         let path = format!("/tmp/memcastle-github-{}", hex(&nonce));
         let clone = Self { path };
-        // This helper is fixed code: Git invokes it only for github.com and reads the granted variable itself.
+        // This helper is fixed code: Git invokes it only for github.com. The wrapper supplies
+        // MC_GITHUB_TOKEN to Git from stdin, never from a command argument or a file.
         // The token is never a command argument or a Git configuration value on disk.
-        const HELPER: &str = "!f() { host=; while IFS= read -r line; do case \"$line\" in host=*) host=${line#host=};; esac; done; if [ \"$host\" = github.com ]; then printf 'username=x-access-token\\npassword=%s\\n' \"${GH_TOKEN:-$GITHUB_TOKEN}\"; fi; }; f";
+        const HELPER: &str = "!f() { host=; while IFS= read -r line; do case \"$line\" in host=*) host=${line#host=};; esac; done; if [ \"$host\" = github.com ]; then printf 'username=x-access-token\\npassword=%s\\n' \"$MC_GITHUB_TOKEN\"; fi; }; f";
         let mut args = vec![
             "-c".into(),
             "credential.helper=".into(),
@@ -66,7 +83,8 @@ impl Clone {
             "-c".into(),
             "http.followRedirects=false".into(),
         ];
-        if crate::api::token().is_some() {
+        let token = crate::api::token();
+        if token.is_some() {
             args.extend(["-c".into(), format!("credential.helper={HELPER}")]);
         }
         args.extend([
@@ -76,14 +94,14 @@ impl Clone {
             format!("https://github.com/{repo}.wiki.git"),
             clone.path.clone(),
         ]);
-        git(&args)?;
+        git(&args, token.as_deref())?;
         Ok(clone)
     }
 
     fn command(&self, arguments: &[&str]) -> Result<String, String> {
         let mut args = vec!["--git-dir".to_string(), self.path.clone()];
         args.extend(arguments.iter().map(|arg| (*arg).to_string()));
-        String::from_utf8(git(&args)?).map_err(|_| "Git wiki content is not UTF-8".into())
+        String::from_utf8(git(&args, None)?).map_err(|_| "Git wiki content is not UTF-8".into())
     }
 }
 
@@ -148,6 +166,23 @@ pub(crate) fn page(revision: &Revision) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn selected_token_reaches_only_git_clone_and_is_not_reported_on_failure() {
+        crate::api::tests::with_selected("wiki-selected-token", || {
+            assert_eq!(revisions("acme/alpha").unwrap().len(), 3);
+        });
+        crate::api::tests::with_selected("rejected-token", || {
+            let error = revisions("acme/alpha").unwrap_err();
+            assert!(error.contains("wiki request failed"));
+            assert!(!error.contains("rejected-token"));
+        });
+        assert!(
+            git(&[], Some("line\nbreak"))
+                .unwrap_err()
+                .contains("line break")
+        );
+    }
 
     #[test]
     fn rejects_unsafe_wiki_paths_and_commit_ids() {

@@ -19,11 +19,23 @@ fn run_process(
 
     let executable = match program {
         "curl" | "git" => format!("{}/fixtures/bin/{program}", env!("CARGO_MANIFEST_DIR")),
+        "sh" => "/bin/sh".into(),
         "rm" => "/bin/rm".into(),
         _ => return Err("unexpected test process".into()),
     };
-    let mut child = Command::new(executable)
-        .args(args)
+    let mut command = Command::new(executable);
+    command.args(args);
+    if program == "sh" {
+        command.env(
+            "PATH",
+            format!(
+                "{}/fixtures/bin:{}",
+                env!("CARGO_MANIFEST_DIR"),
+                std::env::var("PATH").unwrap_or_default()
+            ),
+        );
+    }
+    let mut child = command
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -274,7 +286,7 @@ fn repositories(source: &SourceRef) -> Result<Vec<(String, Value)>, String> {
         } else {
             let listings = if owner.contains(['*', '?']) {
                 if api::token().is_none() {
-                    return Err("owner wildcard needs GH_TOKEN or GITHUB_TOKEN to list accessible repositories".into());
+                    return Err("owner wildcard needs a selected GitHub credential or GH_TOKEN/GITHUB_TOKEN to list accessible repositories".into());
                 }
                 api::pages("/user/repos?affiliation=owner,collaborator,organization_member")?
             } else {
@@ -529,14 +541,16 @@ impl Guest for GitHub {
                 "labels" | "topics" | "paths" => {
                     list(&value).map_err(SourceError::InvalidInput)?.join(",")
                 }
-                "issues" | "pulls" | "comments" | "reviews" | "metadata" => match value.trim() {
-                    "true" | "false" => value.trim().into(),
-                    _ => {
-                        return Err(SourceError::InvalidInput(format!(
-                            "{key} must be true or false"
-                        )));
+                "issues" | "pulls" | "comments" | "reviews" | "metadata" | "wiki" => {
+                    match value.trim() {
+                        "true" | "false" => value.trim().into(),
+                        _ => {
+                            return Err(SourceError::InvalidInput(format!(
+                                "{key} must be true or false"
+                            )));
+                        }
                     }
-                },
+                }
                 "since" => {
                     since(&value).map_err(SourceError::InvalidInput)?;
                     value.trim().into()
@@ -569,6 +583,7 @@ impl Guest for GitHub {
             locator: locator.unwrap_or_else(|| "github.com".into()),
             options: validated.clone().into_iter().collect(),
         };
+        let wiki = enabled(&source, "wiki", true);
         if !["issues", "pulls", "comments", "reviews", "metadata"]
             .iter()
             .any(|key| {
@@ -578,7 +593,7 @@ impl Guest for GitHub {
                     matches!(*key, "issues" | "pulls" | "metadata"),
                 )
             })
-            && option(&source, "wiki_include").is_none()
+            && (!wiki || option(&source, "wiki_include").is_none())
         {
             return Err(SourceError::InvalidInput(
                 "enable at least one content kind or wiki_include".into(),
@@ -587,6 +602,24 @@ impl Guest for GitHub {
         if option(&source, "wiki_exclude").is_some() && option(&source, "wiki_include").is_none() {
             return Err(SourceError::InvalidInput(
                 "wiki_exclude needs wiki_include".into(),
+            ));
+        }
+        if option(&source, "wiki").is_some_and(|value| value == "true")
+            && option(&source, "wiki_include").is_none()
+        {
+            return Err(SourceError::InvalidInput(
+                "wiki=true needs wiki_include".into(),
+            ));
+        }
+        if option(&source, "paths").is_some() && option(&source, "wiki_include").is_none() {
+            return Err(SourceError::InvalidInput("paths needs wiki_include".into()));
+        }
+        if option(&source, "labels").is_some()
+            && !enabled(&source, "issues", true)
+            && !enabled(&source, "pulls", true)
+        {
+            return Err(SourceError::InvalidInput(
+                "labels needs issues or pulls enabled".into(),
             ));
         }
         if enabled(&source, "reviews", false) && !enabled(&source, "pulls", true) {
@@ -629,7 +662,11 @@ impl Guest for GitHub {
         let mut state = cursor(&position)?;
         let repos = repositories(&source).map_err(SourceError::Failed)?;
         let api = discover_api(&source, &repos).map_err(SourceError::Failed)?;
-        let wiki_include = entries(&source, "wiki_include");
+        let wiki_include = if enabled(&source, "wiki", true) {
+            entries(&source, "wiki_include")
+        } else {
+            Vec::new()
+        };
         let wiki_exclude = entries(&source, "wiki_exclude");
         if !wiki_include.is_empty()
             && !repos
@@ -892,6 +929,15 @@ mod tests {
             vec![("include", "acme/alpha"), ("issues", "yes")],
             vec![("include", "acme/alpha"), ("since", "tomorrow")],
             vec![("include", "acme/alpha"), ("wiki_exclude", "acme/alpha")],
+            vec![("include", "acme/alpha"), ("wiki", "yes")],
+            vec![("include", "acme/alpha"), ("wiki", "true")],
+            vec![("include", "acme/alpha"), ("paths", "Home.md")],
+            vec![
+                ("include", "acme/alpha"),
+                ("issues", "false"),
+                ("pulls", "false"),
+                ("labels", "wanted"),
+            ],
             vec![
                 ("include", "acme/alpha"),
                 ("pulls", "false"),
@@ -1047,6 +1093,14 @@ mod tests {
     #[test]
     fn wiki_history_filters_and_resumes() {
         let wiki_source = source(&[("wiki_include", "acme/alpha"), ("paths", "home.md")]);
+        let without_wiki = source(&[
+            ("wiki_include", "acme/alpha"),
+            ("wiki_exclude", "acme/alpha"),
+            ("paths", "Home.md"),
+            ("wiki", "false"),
+        ]);
+        assert_eq!(discover_all(&without_wiki).candidates.len(), 3);
+        assert_ne!(wiki_source.account, without_wiki.account);
         let first = discover_all(&wiki_source);
         assert_eq!(first.candidates.len(), 5);
         let wiki = &first.candidates[3..];

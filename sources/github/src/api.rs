@@ -8,7 +8,22 @@ const MAX_PAGES: usize = 100;
 const PAGE_SIZE: usize = 100;
 
 #[cfg(not(test))]
-pub(crate) fn token() -> Option<String> {
+fn selected_token() -> Option<String> {
+    crate::memcastle::source::host::source_credential().ok()
+}
+
+#[cfg(test)]
+std::thread_local! {
+    static SELECTED_TOKEN: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(test)]
+fn selected_token() -> Option<String> {
+    SELECTED_TOKEN.with(|token| token.borrow().clone())
+}
+
+#[cfg(not(test))]
+fn legacy_token() -> Option<String> {
     ["GH_TOKEN", "GITHUB_TOKEN"]
         .into_iter()
         .find_map(|name| std::env::var(name).ok().filter(|token| !token.is_empty()))
@@ -16,8 +31,19 @@ pub(crate) fn token() -> Option<String> {
 
 // Native tests always use public, offline fixtures, regardless of the developer's environment.
 #[cfg(test)]
-pub(crate) fn token() -> Option<String> {
+fn legacy_token() -> Option<String> {
     None
+}
+
+pub(crate) fn token() -> Option<String> {
+    choose_token(selected_token(), legacy_token)
+}
+
+fn choose_token(
+    selected: Option<String>,
+    legacy: impl FnOnce() -> Option<String>,
+) -> Option<String> {
+    selected.or_else(legacy)
 }
 
 fn escape(value: &str) -> Result<String, String> {
@@ -105,8 +131,46 @@ pub(crate) fn pages(path: &str) -> Result<Vec<Value>, String> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
+
+    pub(crate) fn with_selected<T>(value: &str, test: impl FnOnce() -> T) -> T {
+        SELECTED_TOKEN.with(|cell| {
+            let previous = cell.replace(Some(value.into()));
+            struct Reset<'a>(&'a std::cell::RefCell<Option<String>>, Option<String>);
+            impl Drop for Reset<'_> {
+                fn drop(&mut self) {
+                    self.0.replace(self.1.take());
+                }
+            }
+            let _reset = Reset(cell, previous);
+            test()
+        })
+    }
+
+    #[test]
+    fn selected_credential_is_used_for_rest_without_exposing_it_in_errors() {
+        assert!(token().is_none());
+        assert_eq!(
+            choose_token(None, || Some("legacy".into())).as_deref(),
+            Some("legacy")
+        );
+        assert_eq!(
+            choose_token(Some("selected".into()), || panic!(
+                "must not read another credential"
+            ))
+            .as_deref(),
+            Some("selected")
+        );
+        with_selected("rejected-token", || {
+            assert_eq!(token().as_deref(), Some("rejected-token"));
+            let error = request("/repos/acme/alpha").unwrap_err();
+            assert!(error.contains("refused"));
+            assert!(!error.contains("rejected-token"));
+        });
+        assert!(token().is_none());
+        assert!(request("/repos/acme/alpha").is_ok());
+    }
 
     #[test]
     fn rejects_unsafe_credentials_and_api_paths() {

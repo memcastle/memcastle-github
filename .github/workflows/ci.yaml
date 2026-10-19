@@ -152,4 +152,4 @@ jobs:
       core-version: ${{ matrix.core }}
       plugin-ref: ${{ inputs.tag }}
       fixture-bin: sources/github/fixtures/bin
-      extra-smoke-command: node scripts/smoke_adoption.mjs
+      extra-smoke-command: node scripts/smoke_adoption.mjs && node scripts/smoke_scoped_miners.mjs
