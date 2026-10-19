@@ -37,6 +37,7 @@ node scripts/smoke_adoption.mjs
 Packaging writes an SCM-versioned archive in `dist/` and its external `.sha256sum`. `plugin.toml` remains an immutable
 descriptor; `manifest.toml` is generated only inside the archive. Commit `sources/github/Cargo.lock` before releasing.
 CI tests the exact built artifact against Core's shared plugin-validation workflow.
+The Core setup action verifies the fixed development binary against `SHA256SUMS` before packaging and validation.
 CI also uploads native Cargo coverage and test results to Codecov. gh-ship and git-cliff open a reviewed `release/next`
 PR for releasable commits. Configure the `release` environment with `APP_CLIENT_ID` and `APP_PRIVATE_KEY` for an
 installed GitHub App before publishing.
