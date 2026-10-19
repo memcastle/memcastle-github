@@ -8,6 +8,10 @@ sha1 = "a" * 40
 sha2 = "b" * 40
 if "clone" in args:
     assert args[-2] == "https://github.com/acme/alpha.wiki.git"
+    if token := os.environ.get("MC_GITHUB_TOKEN"):
+        assert token not in " ".join(args), "token must not appear in git arguments"
+        if token == "rejected-token":
+            raise SystemExit(1)
     os.mkdir(args[-1])
 elif "log" in args:
     sys.stdout.write(f"MC:{sha1}:2026-01-03T00:00:00Z\nHome.md\n\n"

@@ -13,9 +13,10 @@ retains_raw = true
 needs_credentials = false
 
 [permissions]
+credential = true
 # The two standard token names are optional for public repositories. Programs receive no other daemon environment.
 env = ["GH_TOKEN", "GITHUB_TOKEN"]
-process = ["curl", "git", "rm"]
+process = ["curl", "git", "rm", "sh"]
 
 [options.account]
 type = "string"
@@ -40,6 +41,10 @@ description = "repositories whose Git-backed wiki history to mine, independently
 type = "string"
 breadth = "exclude"
 description = "wiki repository exclusions (applied after wiki_include)"
+
+[options.wiki]
+type = "string"
+description = "enable or disable wiki mining (true/false); false overrides an inherited wiki_include"
 
 [options.issues]
 type = "string"

@@ -14,7 +14,8 @@ now = "2026-01-01T00:00:00Z"
 
 def repo(name):
     return {"id": {"acme/alpha": 1, "acme/other": 2}.get(name, 3), "full_name": name,
-            "name": name.split("/")[-1], "description": "Example repository", "topics": ["docs"],
+            "name": name.split("/")[-1], "description": "Example repository",
+            "topics": ["work"] if name == "acme/other" else ["docs"],
             "html_url": f"https://github.com/{name}", "updated_at": now}
 
 

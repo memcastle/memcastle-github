@@ -14,6 +14,7 @@ archive="$("$MEMCASTLE_BIN" plugin package --json | jq -r .archive)"
 "$MEMCASTLE_BIN" plugin test "$archive"
 PATH="$PWD/sources/github/fixtures/bin:$PATH" "$MEMCASTLE_BIN" source test sources/github --no-build
 ARCHIVE="$archive" node scripts/smoke_adoption.mjs
+ARCHIVE="$archive" node scripts/smoke_scoped_miners.mjs
 ```
 
 Core generates the hashed `manifest.toml` only inside the archive; commit `sources/github/Cargo.lock` with implementation changes.

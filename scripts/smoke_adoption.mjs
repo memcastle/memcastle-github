@@ -7,6 +7,7 @@ import { ROOT, cli, isolated, mine, pluginArchive } from "./smoke_common.mjs"
 
 await isolated("memcastle-github-adopt-", ({ root, env }) => {
   env.PATH = `${join(ROOT, "sources/github/fixtures/bin")}:${process.env.PATH}`
+  env.GH_TOKEN = "fixture-legacy-token"
   env.MEMCASTLE_CONFIG = join(root, "config.toml")
   const bundled = join(root, "bundled/github")
   mkdirSync(bundled, { recursive: true })
