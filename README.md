@@ -59,7 +59,7 @@ and a matching external `.sha256sum`, without modifying `plugin.toml`.
 
 ## CI and releases
 
-CI validates the built artifact against Core's `development` prerelease using the shared source-conformance
+CI validates the built artifact against Core `development` and `0.5` using the shared source-conformance
 and installation workflow. The Core setup action verifies the binary against `SHA256SUMS`.
 Native Cargo coverage and test results upload to Codecov with fixed 81% project and `source-github` floors
 and an 80% patch floor; source coverage is not carried over from previous commits.
