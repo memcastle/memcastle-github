@@ -67,6 +67,7 @@ and an 80% patch floor; source coverage is not carried over from previous commit
 gh-ship and git-cliff open a reviewed `release/next` PR for releasable commits. After it merges,
 the release workflow publishes the validated `github/vVERSION` archive. Configure `APP_CLIENT_ID` and
 `APP_PRIVATE_KEY` in the `release` environment for an installed GitHub App.
+The publish workflow uses this credential to check the draft release and upload its validated archive.
 
 ## Contributing
 
