@@ -30,5 +30,6 @@ To update, run `git tpl update --defaults --json`, review `git tpl diff --json`,
 `git tpl merge --json`. Preserve the source's credential and legacy-adoption guidance when reconciling docs.
 If native tests begin producing nonempty LCOV, update the covered-source answer and coverage target.
 
-gh-ship uses git-cliff to propose a reviewed `release/next` PR and publishes `github/v<version>` after CI.
+gh-ship uses git-cliff to propose a reviewed `release/next` PR and publishes
+`github-<version>.tar.gz` under the `<version>` tag after CI.
 See the [README](README.md) for installation and GitHub App configuration.
