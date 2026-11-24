@@ -69,6 +69,10 @@ and a matching external `.sha256sum`, without modifying `plugin.toml`.
 
 ## CI and releases
 
+Source coverage jobs set `WIT_BINDGEN_DEBUG=1` to emit generated ABI glue under the build directory,
+where cargo-llvm-cov's existing filtering excludes it instead of attributing it to provider code.
+Provider coverage gates and release component builds remain unchanged.
+
 CI validates the built artifact against upstream Core `development` only using the shared source-conformance
 and installation workflow. The Core setup action verifies the binary against `SHA256SUMS`.
 Native Cargo coverage and test results upload to Codecov with fixed 81% project and `source-github` floors
