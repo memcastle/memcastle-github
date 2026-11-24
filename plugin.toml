@@ -17,7 +17,7 @@ id = "github"
 type = "source"
 manifest = "sources/github/memcastle-source.toml"
 entry = "sources/github/source.wasm"
-contract = "0.4.0"
+contract = "0.5.0"
 
 
 
