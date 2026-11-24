@@ -1,5 +1,14 @@
 # GitHub source
 
+## Build baseline
+
+Requires Rust 1.100+, `wasm32-wasip3` / WASI 0.3, and source contract 0.5.0.
+Use upstream development Core containing `828f0f6`; stable 0.5.2 predates this ABI.
+Generate and commit `Cargo.lock`, then build with `cargo build --locked --release --target wasm32-wasip3`.
+From the plugin root, `mise run source:github:build` stages the package-ready component.
+Validate with `python3 scripts/validate_component.py source sources/github/source.wasm` and wasm-tools 1.263.0.
+The async WIT acquisition exports use stackful `sync: true` bindings; source identity and cursor semantics are unchanged.
+
 The `github` source is the WebAssembly module of the standalone `memcastle-github` plugin.
 It reads repository metadata, issues, pull requests, optional conversation comments and reviews from the official REST API.
 Repository wikis are separate Git repositories; this source reads their available commit history with Git and files each changed Markdown page at each commit as a separate document.
