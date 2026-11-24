@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.0.0 - 2026-11-24
+
+
+### Bug Fixes
+- Pull generated-binding coverage template fix (cb8d42e)
+
+### Chores
+- Pull latest plugin and source templates (f73de2f)
+
+### build
+- Lock WASI 0.3 bindings (303c71f)
+- Migrate to Rust 1.100 and WASI 0.3 (#20) (d2deb3a)
+
+### tpl
+- Render memcastle-plugin at main (b24ba4a)
+- Render memcastle-plugin at main (52b5493)
 ## 0.1.0 - 2026-10-21
 
 
