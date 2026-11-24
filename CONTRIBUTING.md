@@ -1,17 +1,21 @@
 # Contributing to memcastle-github
 
-Install Rust with `wasm32-wasip2` and Node.js. The source code, offline REST/Git fixtures and manifest
+Install Rust 1.100+ with `wasm32-wasip3` and Node.js. The source code, offline REST/Git fixtures and manifest
 live in `sources/github/`. Keep the `github` source ID, its option identity and cursor format stable;
 review WIT changes, process/environment permissions and Core compatibility together.
 
 ## Development checks
+
+Discover typed module tasks with `mise tasks ls`; see [root tasks](README.md#modules-and-root-tasks).
+Use upstream development Core containing `828f0f6` until a compatible stable release exists.
+Validate components with wasm-tools 1.263.0 through `scripts/validate_component.py` before host conformance.
 
 Point `MEMCASTLE_BIN` to a plugin-capable Core binary. Build the component to
 `sources/github/source.wasm` before packaging.
 
 ```sh
 cargo test --manifest-path sources/github/Cargo.toml --locked
-# Build the wasm32-wasip2 component and copy it to sources/github/source.wasm first.
+# Build the wasm32-wasip3 component and copy it to sources/github/source.wasm first.
 archive="$("$MEMCASTLE_BIN" plugin package --json | jq -r .archive)"
 "$MEMCASTLE_BIN" plugin test "$archive"
 PATH="$PWD/sources/github/fixtures/bin:$PATH" "$MEMCASTLE_BIN" source test sources/github --no-build

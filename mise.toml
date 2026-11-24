@@ -1,6 +1,35 @@
+# Root task configuration and optional release tooling.
+
 [tools]
 git-cliff = "2.12.0"
 
 [tasks.package]
 description = "Package the prebuilt GitHub module with Core"
 run = "memcastle plugin package plugin.toml"
+
+[tasks."source:github:format:check"]
+description = "Check formatting for source github"
+dir = "sources/github"
+run = "cargo fmt --all -- --check"
+
+[tasks."source:github:lint"]
+description = "Lint source github"
+dir = "sources/github"
+run = "cargo clippy --locked --target wasm32-wasip3 -- -D warnings"
+
+[tasks."source:github:test"]
+description = "Run native tests for source github"
+dir = "sources/github"
+run = "cargo test --locked --lib"
+
+[tasks."source:github:build"]
+description = "Build the package-ready component for source github"
+dir = "sources/github"
+run = '''
+set -eu
+cargo build --locked --release --target wasm32-wasip3
+metadata="$(cargo metadata --locked --no-deps --format-version 1)"
+crate="$(printf '%s' "$metadata" | jq -er '.packages[] | select(.manifest_path == (env.PWD + "/Cargo.toml")) | .targets[] | select(.kind | index("cdylib")) | .name')"
+target="$(printf '%s' "$metadata" | jq -er '.target_directory')"
+cp "$target/wasm32-wasip3/release/$crate.wasm" source.wasm
+'''

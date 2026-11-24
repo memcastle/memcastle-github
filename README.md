@@ -1,5 +1,15 @@
 # memcastle-github
 
+## Modules and root tasks
+
+- Source: [github](sources/github/).
+
+Use `mise tasks ls` for `source:github:build`, `source:github:test`, `source:github:lint`, and `source:github:format:check`.
+The build task stages `source.wasm` for packaging; native tests do not replace host conformance.
+Requires Rust 1.100+, `wasm32-wasip3`, wasm-tools 1.263.0, and upstream development Core containing `828f0f6`.
+Stable 0.5.2 predates WASI 0.3 despite sharing the development version string; the compatibility range is transitional.
+Run `python3 scripts/validate_component.py source sources/github/source.wasm` before host and archive checks.
+
 [![CI][ci-badge]][ci-workflow] [![Codecov][codecov-badge]][codecov-project]
 
 [ci-badge]: https://github.com/memcastle/memcastle-github/actions/workflows/ci.yaml/badge.svg?branch=main
@@ -42,7 +52,7 @@ the plugin normally without the adoption flag.
 
 ## Build and test locally
 
-Install Rust with `wasm32-wasip2`, Node.js and a plugin-capable MemCastle binary.
+Install Rust 1.100+ with `wasm32-wasip3`, Node.js and the verified upstream development MemCastle binary.
 Build the source component to `sources/github/source.wasm` before packaging; see CI for the reproducible
 build and copy commands. Commit `sources/github/Cargo.lock` before release.
 
@@ -59,7 +69,11 @@ and a matching external `.sha256sum`, without modifying `plugin.toml`.
 
 ## CI and releases
 
-CI validates the built artifact against Core `development` and `0.5` using the shared source-conformance
+Source coverage jobs set `WIT_BINDGEN_DEBUG=1` to emit generated ABI glue under the build directory,
+where cargo-llvm-cov's existing filtering excludes it instead of attributing it to provider code.
+Provider coverage gates and release component builds remain unchanged.
+
+CI validates the built artifact against upstream Core `development` only using the shared source-conformance
 and installation workflow. The Core setup action verifies the binary against `SHA256SUMS`.
 Native Cargo coverage and test results upload to Codecov with fixed 81% project and `source-github` floors
 and an 80% patch floor; source coverage is not carried over from previous commits.
